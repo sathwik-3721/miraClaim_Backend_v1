@@ -3,18 +3,20 @@ const { getClaimDetails } = require("./pdfController");
 
 let imageBuffer;
 exports.verifyMetadata = async (req, res) => {
+  const { claimDate } = getClaimDetails();
   try {
-    const { claimDate } = getClaimDetails();
+    // const { claimDate } = getClaimDetails();
     if (!req.files || req.files.length === 0) {
       return res.status(400).send("No files uploaded.");
     }
 
+    console.log("claim detalils", claimDate);
     const { formattedDate, validationMessage } = extractExifData(req.files[0].buffer, claimDate);
     imageBuffer=req.files[0].buffer
     return res.status(200).json({ message: validationMessage, claimDate, imageDate: formattedDate });
   } catch (error) {
     console.error("Error reading EXIF data:", error.message);
-    return res.status(500).send("Error reading EXIF data.");
+    return res.status(200).json({ message: "Invalid Evidence", claimDate: claimDate, imageDate: "Evidence metadata not found", });
   }
 };
 
