@@ -98,7 +98,7 @@ exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
 
         const result = {
           "Damaged Component": parsedJson["Object Name"] || "Unknown",
-          "Evidence Component": parsedJson["Analyzed Image"] || "Unknown",
+          "Evidence Content": parsedJson["Analyzed Image"] || "Unknown",
           "Matching percentage": matchingPercentage,
           "Evidence Relevance": matchingPercentage > 80 ? "Relevant" : "Irrelevant",
           "Claim Status": claimStatus,
