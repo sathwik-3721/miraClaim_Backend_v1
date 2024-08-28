@@ -8,7 +8,10 @@ exports.extractExifData = (buffer, claimDate) => {
   const dateTimeExif = tags["DateTime"]?.description;
   const formattedDate = formatDate(dateTimeExif.split(" ")[0]);
 
-  const validationMessage = isValidClaimDate(new Date(formattedDate), new Date(claimDate))
+  const validationMessage = isValidClaimDate(
+    new Date(formattedDate),
+    new Date(claimDate)
+  )
     ? "Valid Image"
     : "Please upload images that are taken recently";
 
@@ -18,6 +21,7 @@ exports.extractExifData = (buffer, claimDate) => {
 // Analyze the content of the image using an external AI service
 exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
   try {
+    console.log("imgbuff", imageBuffer);
     const mimeType = "image/jpeg"; // You can dynamically determine this if needed
 
     // Prepare the request payload
@@ -32,13 +36,13 @@ exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
             },
           },
           {
-            text: `Analyze the image and tell me what object it contains. 
-                   I'll also give you an object name, and you should return if both the image and the object name match.
-                   The output should be in the following JSON format:
-                   - Object Name
-                   - Analyzed Image
-                   - Matching Percentage.
-                   The object name is: ${itemCovered}`,
+            text: `Analyze the Image and tell me what object does the image contains. 
+                        And I'll also give you an object name and give me the result that if both the given image and the object name given to you matches or not
+                        The Output must be in JSON format of below
+                        - Object Name -
+                        - Analyzed Image -
+                        - Matching percentage -. 
+                        The object name is ${itemCovered}`,
           },
         ],
       },
@@ -47,7 +51,7 @@ exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
     const config = {
       method: "post",
       maxBodyLength: Infinity,
-      url: process.env.MIRA_AI_URL, // External AI API endpoint
+      url: process.env.MIRA_AI_URL,
       headers: {
         model: process.env.MIRA_AI_MODEL,
         "access-key": process.env.MIRA_AI_ACCESS_KEY,
@@ -61,12 +65,12 @@ exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
     console.log("API Response:", response.data);
 
     // Extract the raw content from the response
-    const rawContent = response.data.message.content;
+    const rawContent = response?.data?.message?.content;
 
     // Extract JSON from Markdown code block
     const jsonContentMatch = rawContent.match(/``` json\n([\s\S]*?)\n```/);
 
-    if (jsonContentMatch) {
+    if (jsonContentMatch && jsonContentMatch[1]) {
       const jsonContent = jsonContentMatch[1].trim();
       console.log("Extracted JSON Content:", jsonContent);
 
@@ -74,26 +78,29 @@ exports.analyzeImageContent = async (imageBuffer, itemCovered) => {
         // Parse the JSON content
         const parsedJson = JSON.parse(jsonContent);
 
-        // Construct the result object
-        const matchingPercentageStr = parsedJson["Matching percentage"];
-        const matchingPercentage = parseInt(matchingPercentageStr.replace("%", "").trim());
+        // Handle potential undefined values before processing
+        const matchingPercentageStr = parsedJson["Matching percentage"] || "0%";
+        const matchingPercentage = parseInt(matchingPercentageStr.replace("%", "").replace(" ", ""));
+        console.log("match%", matchingPercentage);
 
         let claimStatus;
         if (matchingPercentage < 80) {
           claimStatus = {
-            status: "Claim Rejected",
-            reason: "The matching percentage is below the acceptable threshold.",
+            status: "Rejected",
+            reason:
+              "The matching percentage is below the acceptable threshold.",
           };
         } else {
           claimStatus = {
-            status: "Claim Authorized",
+            status: "Authorized",
           };
         }
 
         const result = {
-          "Object Name": parsedJson["Object Name"],
-          "Analyzed Image": parsedJson["Analyzed Image"],
+          "Damaged Component": parsedJson["Object Name"] || "Unknown",
+          "Evidence Component": parsedJson["Analyzed Image"] || "Unknown",
           "Matching percentage": matchingPercentage,
+          "Evidence Relevance": matchingPercentage > 80 ? "Relevant" : "Irrelevant",
           "Claim Status": claimStatus,
         };
 

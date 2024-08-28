@@ -1,6 +1,7 @@
 const { extractExifData, analyzeImageContent } = require("../services/imageService");
 const { getClaimDetails } = require("./pdfController");
 
+let imageBuffer;
 exports.verifyMetadata = async (req, res) => {
   try {
     const { claimDate } = getClaimDetails();
@@ -9,6 +10,7 @@ exports.verifyMetadata = async (req, res) => {
     }
 
     const { formattedDate, validationMessage } = extractExifData(req.files[0].buffer, claimDate);
+    imageBuffer=req.files[0].buffer
     return res.status(200).json({ message: validationMessage, claimDate, imageDate: formattedDate });
   } catch (error) {
     console.error("Error reading EXIF data:", error.message);
@@ -19,7 +21,7 @@ exports.verifyMetadata = async (req, res) => {
 exports.analyzeImage = async (req, res) => {
   try {
     const { itemCovered } = getClaimDetails();
-    const result = await analyzeImageContent(req.imageBuffer, itemCovered);
+    const result = await analyzeImageContent(imageBuffer, itemCovered);
     return res.json(result);
   } catch (error) {
     console.error("Error processing image:", error.message);
