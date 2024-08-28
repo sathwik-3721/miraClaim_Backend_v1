@@ -12,7 +12,7 @@ exports.extractExifData = (buffer, claimDate) => {
     new Date(formattedDate),
     new Date(claimDate)
   )
-    ? "Valid Image"
+    ? "Valid Evidence"
     : "Please upload images that are taken recently";
 
   return { formattedDate, validationMessage };
